@@ -10,7 +10,7 @@ a:link, a:visited, a:active {
   color: #0F0;
 }
 
-#logo {
+.larger {
   font-size: 17px;
 }
 
