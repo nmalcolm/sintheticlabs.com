@@ -1,0 +1,40 @@
+body {
+  font-family: "Courier New", Courier;
+  color: #0F0;
+  background-color: black;
+  font-size: 14px;
+  margin: 10px;
+}
+
+a:link, a:visited, a:active {
+  color: #0F0;
+}
+
+#logo {
+  font-size: 17px;
+}
+
+.goaway {
+  text-align: right;
+  margin: 20px;
+  font-size: 12px;
+}
+
+#copyright {
+  float: right;
+}
+
+footer {
+  background-color: #0F0;
+  color: black;
+  padding: 2px;
+  margin: 20px;
+  text-align: center;
+  font-size: 13px;
+}
+
+footer a:link,
+footer a:visited,
+footer a:active {
+  color: black;
+}
