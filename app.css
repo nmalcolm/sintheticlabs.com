@@ -38,3 +38,14 @@ footer a:visited,
 footer a:active {
   color: black;
 }
+
+h1, h2 {
+  margin: 0px;
+  padding: 0px;
+  font-weight: normal;
+  display: inline;
+}
+
+h1 {
+  font-size: 17px;
+}
