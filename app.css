@@ -49,3 +49,16 @@ h1, h2 {
 h1 {
   font-size: 17px;
 }
+
+pre {
+  border: 5px solid green;
+  padding: 5px;
+  white-space: pre-wrap;
+  font-size: 12px;
+  font-family: Consolas, Menlo, Monaco, "Lucida Console", "Liberation Mono", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Courier New", monospace, serif;
+}
+
+.greenbox {
+  border: 5px solid green;
+  padding: 5px;
+}
