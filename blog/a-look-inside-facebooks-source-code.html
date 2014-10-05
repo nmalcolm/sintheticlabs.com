@@ -137,7 +137,7 @@ Type intl_string.php --help to get more information about how to use this script
   </p>
 
   <p>
-    Now we're getting to the good stuff. We have ksalas on dev578 running which seems to be a string parser. `intl_string.php` tries to run `/mnt/vol/engshare/tools/fbt_extractor`, so we know for sure there are some other scripts in `/mnt/vol/engshare/`. We can also see they use PHP Unit for unit testing, and "www-hg" shouts Mercurial to me. It's well known they moved from Subversion to Git -- I'd put money on it that they've been expiermenting with Mercurial too at some point.
+    Now we're getting to the good stuff. We have ksalas on dev578 running what seems to be a string parser. `intl_string.php` tries to run `/mnt/vol/engshare/tools/fbt_extractor`, so we know for sure there are some other scripts in `/mnt/vol/engshare/`. We can also see they use PHP Unit for unit testing, and "www-hg" shouts Mercurial to me. It's well known they moved from Subversion to Git -- I'd put money on it that they've been expiermenting with Mercurial too at some point.
   </p>
 
   <p>
@@ -169,7 +169,7 @@ Index: flib/core/db/queryf.php
   </p>
 
   <p>
-    The file in question is `flib/core/db/queryf.php`. At first glance we can tell it's a file which contains a bunch of MySQL-related functions. The function we can see here, `mysql_query_all()`, was written by rmcelroy. From what I can see in the code it's pretty much a simple function which executes a query, with a little custom logging code. It may be more complex but unfortunately we may never know. :(
+    The file in question is `flib/core/db/queryf.php`. At first glance we can tell it's a diff of a file which contains a bunch of MySQL-related functions. The function we can see here, `mysql_query_all()`, was written by rmcelroy. From what I can see in the code it's pretty much a simple function which executes a query, with a little custom logging code. It may be more complex but unfortunately we may never know. :(
   </p>
 
   <p>
