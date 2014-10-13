@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>A look inside Facebook's source code: Part 2 - Sinthetic Labs</title>
+  <link rel="stylesheet" type="text/css" href="../app.css">
+</head>
+<body>
+  <div class="larger">Sinthetic Labs | Blog<br>--------------------------</div>
+
+  <p>Welcome to our static blog. We use a thing called HTML. Crazy, right?</p>
+
+  <div><h1>A look inside Facebook's source code: Part 2</h1></div>
+  <div>13th October, 2014 &mdash; Nathan Malcolm</div>
+
+  <p>
+    A little over a week ago I posted <a href="a-look-inside-facebooks-source-code.html">A look inside Facebook's source code</a>. It tells of my adventures finding and collecting source code which Facebook employees had made public by accident. So far I haven't had any legal threats (<a href="https://twitter.com/sintheticlabs/status/518694486332153856" target="_blank">Facebook is aware of my publication</a>) and I've even had a few Facebook employees follow me on <a href="https://twitter.com/sintheticlabs" target="_blank">Twitter</a> so for now I don't think I've crossed any visible line. That said, here's part 2. It contains more source code I've found along with something I didn't intend to find... Enjoy.
+  </p>
+
+  <p>
+    Within hours of posting part 1 I noticed a significant amount of traffic coming to my blog. This pushed me to go out and see if I could find any more code which had been posted online. It wasn't long before I started seeing wins.
+  </p>
+
+  <p>
+    <pre>
+[1030] __tests__ {arcpatch-D1159711} $ cat EditImagesActivityLoaderTest.php
+&lt;?hh
+// Copyright 2004-present Facebook. All Rights Reserved.
+
+/**
+ * @emails oncall+ads_manager_reporting
+ */
+class EditImagesActivityLoaderTest
+  extends ActivityLoaderTestBase {
+
+  public function beforeEach(): void {
+    Classes::get('AdproAccountImageUrlUtils')
+      -&gt;mockYield('genImageURLsFromHashes', 'http://yeah.woo');
+    $this-&gt;eventType = 'edit_images';
+    $this-&gt;extraData = array(
+      'txn_params' =&gt; array(
+        'account_id' =&gt; 57665093,
+        'specs' =&gt; array(
+          'hash' =&gt; 'eb0198bf8929ff3434583248c05c220f',
+          'status' =&gt; 1,
+        ),
+      )
+    );
+    parent::beforeEach();
+  }
+
+  public async function testImageEdit(): Awaitable&lt;void&gt; {
+    $log = await EditImagesActivityLoader::gen(
+      $this-&gt;viewerContext,
+      $this-&gt;extraData,
+      $this-&gt;headers,
+    );
+    expect(
+      $log-&gt;getExtraData(),
+    )-&gt;toEqual(
+      Map {
+        ActivityExtraDataFields::IMAGE_URL =&gt; Vector {
+          '',
+        },
+      },
+    );
+  }
+}
+    </pre>
+  </p>
+
+  <p>
+    This is awesome. Not just a diff, or a snippet, this is a complete file from Facebook's source code. Not only does this make it more likely there are other files floating around out there, but it also gives us a lot of information we can use to find those files. Class, constant, and method names, even a very specific comment which I presume is just in case any files end up leaked. :-) In fact, it was the class name from a <a href="http://pastebin.com/7V0uY67k" target="_blank">Paste</a> I posted in part 1 which lead me to finding this one. Posted by the same person, I believe.
+  </p>
+
+  <p>
+    Excited with this find, I continued to find more and more.
+  </p>
+
+  <p>
+    <pre>
+$ time hg pull -u --profile
+pulling from ssh://hg.vip.facebook.com//data/scm/www
+searching for changes
+adding changesets
+adding manifests
+adding file changes
+added 2 changesets with 4 changes to 4 files                                    
+updating bookmark master
+4 files updated, 0 files merged, 1 files removed, 0 files unresolved            
+   CallCount    Recursive     Total(s)    Inline(s) module:lineno(function)
+           5            0      2.4535      2.4535   &lt;posix.waitpid&gt;
+         129            0      1.6345      1.6345   &lt;method 'read' of 'file' objects&gt;
+           8            0      1.3407      1.3407   &lt;method 'readline' of 'file' objects&gt;
+           1            0      1.2241      0.5096   &lt;mercurial/merge.py&gt;:156(manifestmerge)
+     +149296            0      0.4437      0.1939   +&lt;mercurial/merge.py&gt;:164(fmerge)
+     +149292            0      0.0801      0.0622   +&lt;mercurial/manifest.py&gt;:20(flags)
+     +149296            0      0.0347      0.0347   +&lt;method 'get' of 'dict' objects&gt;
+          +1            0      0.1557      0.0001   +&lt;mercurial/copies.py&gt;:168(mergecopies)
+          +5            0      0.0001      0.0001   +&lt;mercurial/merge.py&gt;:190(act)
+          24            0      0.4341      0.4341   &lt;sorted&gt;
+           1            0      0.4291      0.4291   &lt;mercurial.osutil.statfiles&gt;
+           1            0      1.4731      0.3215   &lt;mercurial/dirstate.py&gt;:706(status)
+          +1            0      1.1516      0.2211   +&lt;mercurial/dirstate.py&gt;:545(walk)
+         +29            0      0.0000      0.0000   +&lt;method 'append' of 'list' objects&gt;
+          +1            0      0.0000      0.0000   +&lt;mercurial/demandimport.py&gt;:83(__getattribute__)
+          +1            0      0.0000      0.0000   +&lt;method 'iteritems' of 'dict' objects&gt;
+           1            0      0.3132      0.3132   &lt;mercurial.parsers.parse_dirstate&gt;
+      504953            0      0.3514      0.2476   &lt;mercurial/store.py&gt;:32(decodedir)
+     +504953            0      0.1038      0.1038   +&lt;method 'startswith' of 'str' objects&gt;
+      597242            0      0.3299      0.2427   &lt;mercurial/manifest.py&gt;:20(flags)
+     +597242            0      0.0872      0.0872   +&lt;method 'get' of 'dict' objects&gt;
+           2            0      0.2220      0.2220   &lt;mercurial.parsers.parse_manifest&gt;
+           1            0      1.1516      0.2211   &lt;mercurial/dirstate.py&gt;:545(walk)
+          +1            0      0.4291      0.4291   +&lt;mercurial.osutil.statfiles&gt;
+          +2            0      0.2252      0.2252   +&lt;sorted&gt;
+          +1            0      0.1817      0.1817   +&lt;zip&gt;
+     +149298            0      0.0547      0.0547   +&lt;mercurial/dirstate.py&gt;:150(_join)
+     +149297            0      0.0215      0.0215   +&lt;mercurial/match.py&gt;:105(&lt;lambda&gt;)
+      896242            0      0.2046      0.2046   &lt;method 'get' of 'dict' objects&gt;
+      149296            0      0.4437      0.1939   &lt;mercurial/merge.py&gt;:164(fmerge)
+    </pre>
+  </p>
+
+  <p>
+    Here we can see the output from a Facebook engineer who was profiling the Mercurial `pull` command, again giving more proof to Facebook's internal use of it. More interestingly, we can see the server the repository is located on is "hg.vip.facebook.com". Internal access only, of course. We can also see the path to the repository is "/data/scm/www". These are the kinds of things which could aid an attacker. No doubt there's no direct risk but the more they know about how Facebook works internally, the better the chance of them pulling off a successful attack.
+  </p>
+
+  <p>
+    <pre>
+Restarting with system allocator.
+I1027 104928 7fa799181860 DocScorer.cpp:20] registering TermCountScorer for RANK_TERM_COUNT
+I1027 104928 7fa799181860 DocScorer.cpp:48] registering TermWeightedScorer for RANK_TERM_WEIGHTED
+I1027 104928 7fa799181860 PageScorer.h:69] registering PageScorer for RANK_PAGES
+I1027 104928 7fa799181860 Init.cpp:65] Built by user mackduan on Thu Oct 27 10:25:26 PDT 2011 on host devrs317.snc6.facebook.com:/mnt/vol/devrs317.snc6/mackduan/fbcode
+E1027 104928 7fa799181860 IndexServer.cpp:213] setrlimit error setting max fd size to 500000, max 500000: Operation not permitted [1]
+W1027 104928 7fa799181860 DiskIndexBase.cpp:37] Could not find the index version in /home/mackduan/unicorn.index/index.doctable
+I1027 104928 7fa799181860 MixedIdUtil.cpp:40] Tested 0 hits for mixed consistency. 0 were not FBIDs. 0 were probably FBIDs
+W1027 104928 7fa799181860 MixedIdUtil.cpp:51] Not enough hits (0) to make mixed consistency check on query: (random 5000 (or gender:0 gender:1)) [with 0 non-fbid results]
+*** Aborted at 1319737768 (unix time) try &quot;date -d @1319737768&quot; if you are using GNU date ***
+PC: @     0x7fa7973b28fa __pthread_rwlock_wrlock_internal
+*** SIGSEGV (@0x70) received by PID 28070 (TID 0x7fa799181860) from PID 112; stack trace: ***
+    @     0x7fa7973b75e0 (unknown)
+    @     0x7fa7973b28fa __pthread_rwlock_wrlock_internal
+    @           0x4e0c7a facebook::unicorn::LayerManager::updateRealtimeDirStats()
+    @           0x485c87 facebook::unicorn::IndexService::init()
+    @           0x4878e4 facebook::unicorn::IndexService::IndexService()
+    @           0x487ebd facebook::unicorn::IndexService::serviceFromIndex()
+    @           0x42be27 main
+    @     0x7fa79666235d __libc_start_main
+    @           0x40dcb9 (unknown)
+
+      
+    </pre>
+  </p>
+
+  <p>
+    This appears to be a stack trace from <a href="https://www.facebook.com/publications/219621248185635" target="_blank">Facebook's in-house database "Unicorn"</a>. I haven't seen much about this over the years, at least not from a technical point of view, so it's nice to see what running it actually looks like. Again, this exposes some files names and methods which could be used to search for another related pastes or documents. I'm sure a Facebook employee has some Facebook code stored on an Internet-facing server somewhere...
+  </p>
+
+  <p>
+    <pre>
+There were 2 failures:
+
+1) GatekeeperResultsTest::testBeforeClear
+Returned wrong set of checked results before clearing caches
+Failed asserting that two arrays are equal.
+--- Expected
++++ Actual
+@@ @@
+ Array
+ (
++    [499016565] =&gt; Array
++        (
++            [test_user_gate] =&gt; 0
++            [test_gate_off] =&gt; 0
++            [test_exceptions] =&gt; 0
++            [test_all_users] =&gt; 1
++        )
++
++    [0] =&gt; Array
++        (
++            [test_user_gate] =&gt; 0
++            [__test__zero_percent] =&gt; 0
++            [__test__personal_user_only] =&gt; 0
++            [__test__account_based] =&gt; 0
++            [__test__off] =&gt; 0
++            [test_all_users] =&gt; 1
++            [eagleeye_nectar] =&gt; 1
++            [__test__exclude_user] =&gt; 1
++            [__test__percentage] =&gt; 1
++        )
++
+     [499016564] =&gt; Array
+         (
++            [test_app_only] =&gt; 0
+             [test_gate_off] =&gt; 0
++            [test_last_group] =&gt; 0
++            [__test__empty_groups2] =&gt; 0
++            [test_user_gate] =&gt; 1
+             [test_all_users] =&gt; 1
++            [test_exceptions] =&gt; 1
++            [__test__empty_groups] =&gt; 1
++        )
++
++    [35881366586] =&gt; Array
++        (
++            [test_gate_off] =&gt; 0
++            [test_app_only] =&gt; 1
++        )
++
++    [499094456] =&gt; Array
++        (
++            [__test__groups] =&gt; 0
++            [__test__percentage] =&gt; 1
++        )
++
++    [1242318] =&gt; Array
++        (
++            [__test__groups] =&gt; 0
++        )
++
++    [499800704] =&gt; Array
++        (
++            [__test__zero_percent] =&gt; 0
++            [test_all_users] =&gt; 1
++            [__test__personal_user_only] =&gt; 1
++            [__test__account_based] =&gt; 1
++        )
++
++    [132825586775443] =&gt; Array
++        (
++            [__test__zero_percent] =&gt; 0
++            [__test__personal_user_only] =&gt; 0
++            [__test__account_based] =&gt; 1
++            [test_all_users] =&gt; 1
++        )
++
++    [foo] =&gt; Array
++        (
++            [__test__zero_percent] =&gt; 0
++            [__test__off] =&gt; 0
++            [test_all_users] =&gt; 1
++        )
++
++    [-1] =&gt; Array
++        (
++            [__test__zero_percent] =&gt; 0
++            [__test__off] =&gt; 0
++            [test_all_users] =&gt; 1
++        )
++
++    [499094455] =&gt; Array
++        (
++            [__test__percentage] =&gt; 1
++            [__test__groups] =&gt; 1
++        )
++
++    [499800784] =&gt; Array
++        (
++            [test_last_group] =&gt; 1
+         )
+ 
+ )
+
+/data/users/rothbart/www-git/flib/gatekeeper/__tests__/GatekeeperResultsTest.php:43
+
+2) GatekeeperResultsTest::testAfterClear
+Returned wrong set of checked results after clearing caches
+Failed asserting that two arrays are equal.
+--- Expected
++++ Actual
+@@ @@
+ Array
+ (
++    [499016565] =&gt; Array
++        (
++            [test_user_gate] =&gt; 0
++            [test_gate_off] =&gt; 0
++            [test_exceptions] =&gt; 0
++            [test_all_users] =&gt; 1
++        )
++
++    [0] =&gt; Array
++        (
++            [test_user_gate] =&gt; 0
++            [__test__zero_percent] =&gt; 0
++            [__test__personal_user_only] =&gt; 0
++            [__test__account_based] =&gt; 0
++            [__test__off] =&gt; 0
++            [test_all_users] =&gt; 1
++            [eagleeye_nectar] =&gt; 1
++            [__test__exclude_user] =&gt; 1
++            [__test__percentage] =&gt; 1
++        )
++
+     [499016564] =&gt; Array
+         (
++            [test_app_only] =&gt; 0
+             [test_gate_off] =&gt; 0
++            [test_last_group] =&gt; 0
++            [__test__empty_groups2] =&gt; 0
++            [test_user_gate] =&gt; 1
+             [test_all_users] =&gt; 1
++            [test_exceptions] =&gt; 1
++            [__test__empty_groups] =&gt; 1
+         )
+ 
+-    [499016565] =&gt; Array
++    [35881366586] =&gt; Array
+         (
+             [test_gate_off] =&gt; 0
++            [test_app_only] =&gt; 1
++        )
++
++    [499094456] =&gt; Array
++        (
++            [__test__groups] =&gt; 0
++            [__test__percentage] =&gt; 1
++        )
++
++    [1242318] =&gt; Array
++        (
++            [__test__groups] =&gt; 0
++        )
++
++    [499800704] =&gt; Array
++        (
++            [__test__zero_percent] =&gt; 0
+             [test_all_users] =&gt; 1
++            [__test__personal_user_only] =&gt; 1
++            [__test__account_based] =&gt; 1
++        )
++
++    [132825586775443] =&gt; Array
++        (
++            [__test__zero_percent] =&gt; 0
++            [__test__personal_user_only] =&gt; 0
++            [__test__account_based] =&gt; 1
++            [test_all_users] =&gt; 1
++        )
++
++    [foo] =&gt; Array
++        (
++            [__test__zero_percent] =&gt; 0
++            [__test__off] =&gt; 0
++            [test_all_users] =&gt; 1
++        )
++
++    [-1] =&gt; Array
++        (
++            [__test__zero_percent] =&gt; 0
++            [__test__off] =&gt; 0
++            [test_all_users] =&gt; 1
++        )
++
++    [499094455] =&gt; Array
++        (
++            [__test__percentage] =&gt; 1
++            [__test__groups] =&gt; 1
++        )
++
++    [499800784] =&gt; Array
++        (
++            [test_last_group] =&gt; 1
+         )
+ 
+ )
+
+/data/users/rothbart/www-git/flib/gatekeeper/__tests__/GatekeeperResultsTest.php:71
+
+FAILURES!
+Tests: 33, Assertions: 161, Failures: 2.
+    </pre>
+  </p>
+
+  <p>
+    This is pretty interesting, at least for me. It's the output from 2 failed tests of Facebook's <a href="https://www.facebook.com/notes/facebook-engineering/building-and-testing-at-facebook/10151004157328920" target="_blank">Gatekeeper</a>, a system which allows Facebook to deploy features and changes to certain people. People in the United States only, 10% of everyone on Facebook, or even <a href="http://techcrunch.com/2009/09/10/yeah-ok-so-facebook-punkd-us/" target="_blank">everyone who works at TechCrunch</a>. Much love to <a href="https://twitter.com/evanpriestley" target="_blank">Evan Priestley</a> for developing that. Once more we're given full path names, file names, and even the contents of the arrays. By now, that's all gravy.
+  </p>
+
+
+  <p>
+    Lastly, something I did not expect to find...
+  </p>
+
+  <p>
+    <pre>
+cluster_rack  location_id  type         inst_id  data                             created_at                       created_by
+AN            449317       Asset        195416   NULL                             1302052148114                    7104138
+AN            449317       serf.Server  101180   NULL                             1302052148114                    7104138
+to-1          195966       Asset        134685   cab2to.05.ash2.facebook.com      1301635575307                    0
+to-1          195966       Asset        275534   nfshome102.ash2.facebook.com     1285205171896                    0
+to-1          195966       Asset        275546   shelf:                           nfsads201.ash2/nfsads202.ash2    1282000354316    0
+to-1          195966       Asset        275547   shelf:                           nfsads201.ash2/nfsads202.ash2    1282000354316    0
+to-1          195966       Asset        275548   shelf:                           nfsads201.ash2/nfsads202.ash2    1282000354316    0
+to-1          195966       Asset        275549   shelf:                           nfsads201.ash2/nfsads202.ash2    1282000354316    0
+to-1          195966       Asset        275550   shelf:                           nfsads201.ash2/nfsads202.ash2    1282000354316    0
+to-1          195966       Asset        275551   shelf:                           nfsads201.ash2/nfsads202.ash2    1282000354316    0
+to-1          195966       Asset        275552   shelf:                           nfsads201.ash2/nfsads202.ash2    1282000354316    0
+to-1          195966       Asset        275553   shelf:                           nfsads201.ash2/nfsads202.ash2    1282000354316    0
+to-1          195966       Asset        356315   shelf:                           nfshome101.ash2/nfshome102.ash2  1288740324482    0
+to-1          195966       serf.Device  321367   shelf:                           nfshome101/102                   1301626706996    0
+to-1          195966       serf.Device  321369   shelf:                           nfshome101/102                   501              1301626706996  0
+to-1          195966       serf.Device  321371   shelf:                           nfshome101/102                   1053             1301626706996  0
+to-1          195966       serf.Device  321373   shelf:                           nfshome101/102                   8831             1301626706996  0
+to-1          195966       serf.Device  321375   shelf:                           nfshome101/102                   3483             1301626706996  0
+to-1          195966       serf.Device  321720   nfshome102.ash2.facebook.com     1301635996180                    0
+to-1          195966       serf.Device  321741   shelf:                           nfshome101/102                   9803             1301635996180  0
+to-1          195966       serf.Device  321743   shelf:                           nfshome101/102                   9704             1301635996180  0
+to-1          195966       serf.Device  321745   shelf:                           nfshome101/102                   8646             1301635996180  0
+to-1          195966       serf.Device  332951   shelf:                           nfshome101/102                   1988             1301627784273  0
+to-1          195966       serf.Device  343402   cab2to.05.ash2.facebook.com      1301635608749                    0
+lab1          27120        Asset        30093    evaldb007.snc1.facebook.com      1286665610656                    0
+lab1          27120        Asset        30146    evaldb006.snc1.facebook.com      1286665610656                    0
+lab1          27120        Asset        74804    evaldb005.snc1.facebook.com      1288843992654                    0
+lab1          27120        Asset        74805    evaldb002.snc1.facebook.com      1285206728831                    0
+lab1          27120        Asset        83633    evaldb004.snc1.facebook.com      1281335337425                    0
+lab1          27120        Asset        111193   evaldb009.snc1.facebook.com      1277918063890                    0
+lab1          27120        Asset        111199   evaldb008.snc1.facebook.com      1279300631102                    0
+lab1          27120        Asset        114965   gpgpu001.snc1.facebook.com       1277918233565                    0
+lab1          27120        Asset        114992   gpgpu002.snc1.facebook.com       1279300631102                    0
+lab1          27120        Asset        173916   hadoop20001.snc1.facebook.com    1279300685323                    0
+lab1          27120        Asset        173917   hadoop20002.snc1.facebook.com    1279300685323                    0
+lab1          27120        Asset        196947   hphaytest007.snc1.facebook.com   1279043452986                    0
+lab1          27120        Asset        196951   hpfeedtest001.snc1.facebook.com  1279043452986                    0
+lab1          27120        Asset        419444   udbqa014.snc1.facebook.com       1295915194939                    499800253
+lab1          27120        serf.Server  15698    evaldb007.snc1.facebook.com      1286665622897                    0
+lab1          27120        serf.Server  15751    evaldb006.snc1.facebook.com      1286665622897                    0
+lab1          27120        serf.Server  35176    evaldb005.snc1.facebook.com      1288843993125                    0
+lab1          27120        serf.Server  35177    evaldb002.snc1.facebook.com      1285206861517                    0
+lab1          27120        serf.Server  41389    evaldb004.snc1.facebook.com      1281335525991                    0
+lab1          27120        serf.Server  57514    evaldb009.snc1.facebook.com      1277918194997                    0
+lab1          27120        serf.Server  58937    gpgpu001.snc1.facebook.com       1277918342512                    0
+lab1          27120        serf.Server  102386   hphaytest007.snc1.facebook.com   1279043481362                    0
+lab1          27120        serf.Server  102388   hpfeedtest001.snc1.facebook.com  1279043481362                    0
+lab1          27120        serf.Server  154737   evaldb008.snc1.facebook.com      1279300667916                    0
+lab1          27120        serf.Server  154784   gpgpu002.snc1.facebook.com       1279300667916                    0
+lab1          27120        serf.Server  154855   hadoop20001.snc1.facebook.com    1279300731135                    0
+lab1          27120        serf.Server  154856   hadoop20002.snc1.facebook.com    1279300731135                    0
+lab1          27120        serf.Server  257758   udbqa014.snc1.facebook.com       1295915203088                    499800253
+lab1          27120        subnet       0        10.22.31.0/24                    1288998522459                    0
+labr          17736        Asset        18624    labrack1.06.snc1.facebook.com    1277938272706                    0
+labr          17736        Asset        29598    udbqa009.snc1.facebook.com       1281571223091                    0
+labr          17736        Asset        29627    udbqa010.snc1.facebook.com       1301076102264                    499800253
+labr          17736        Asset        75346    adsvir001.snc1.facebook.com      1279300617027                    0
+labr          17736        Asset        87834    evaldb001.snc1.facebook.com      1288843992654                    0
+labr          17736        Asset        103620   evaldb003.snc1.facebook.com      1279300631102                    0
+labr          17736        serf.Device  299467   labrack1.06.snc1.facebook.com    1301635297283                    0
+labr          17736        serf.Server  15459    udbqa009.snc1.facebook.com       1281571223825                    0
+labr          17736        serf.Server  15488    udbqa010.snc1.facebook.com       1301076102589                    499800253
+labr          17736        serf.Server  43576    evaldb001.snc1.facebook.com      1288843993125                    0
+labr          17736        serf.Server  154642   adsvir001.snc1.facebook.com      1279300641353                    0
+labr          17736        serf.Server  154696   evaldb003.snc1.facebook.com      1279300667916                    0
+labr          17736        subnet       0        10.22.31.0/24                    1288998519243                    0
+lab1          5624         Asset        31800    NULL                             1277915138110                    0
+lab1          5624         Asset        111549   NULL                             1279043427696                    0
+lab1          5624         Asset        122195   webi20019.snc1.facebook.com      1288133971358                    0
+lab1          5624         serf.Device  307000   1301625112196                    0
+lab1          5624         serf.Server  17168    1301625112196                    0
+lab1          5624         serf.Server  154333   webi20019.snc1.facebook.com      1301625112196                    0
+x             168128       Asset        62371    harch202.snc1.facebook.com       1288289760452                    0
+x             168128       Asset        62372    harch203.snc1.facebook.com       1288300194518                    0
+x             168128       Asset        62373    harch204.snc1.facebook.com       1288300274423                    0
+x             168128       Asset        62374    harch205.snc1.facebook.com       1288300354576                    0
+x             168128       Asset        62379    harch201.snc1.facebook.com       1288300424566                    0
+x             168128       serf.Server  32426    harch202.snc1.facebook.com       1288289760707                    0
+x             168128       serf.Server  32430    harch203.snc1.facebook.com       1288300194798                    0
+x             168128       serf.Server  32434    harch204.snc1.facebook.com       1288300274700                    0
+x             168128       serf.Server  32438    harch205.snc1.facebook.com       1288300355081                    0
+x             168128       serf.Server  32458    harch201.snc1.facebook.com       1288300425091                    0
+01            360315       Asset        274674   NULL                             1295914222378                    499800253
+01            360315       serf.Device  321282   1301635942194                    0
+lab2          284659       Asset        6996     rsw2lab2.07.snc1.facebook.com    1288058917863                    0
+lab2          284659       Asset        62678    NULL                             1288058942861                    0
+lab2          284659       serf.Device  297766   rsw2lab2.07.snc1.facebook.com    1301635210915                    0
+lab2          284659       serf.Device  303746   1301635338438                    0
+fn-2          256574       Asset        119280   NULL                             1287526095028                    0
+fn-2          256574       Asset        276522   nfshome102.snc6.facebook.com     1287538534347                    0
+fn-2          256574       Asset        276528   shelf:                           nfshome101.snc6/nfshome102.snc6  1287525995251    0
+fn-2          256574       Asset        276529   shelf:                           nfshome101.snc6/nfshome102.snc6  1287525995251    0
+fn-2          256574       Asset        276530   shelf:                           nfshome101.snc6/nfshome102.snc6  1287525995251    0
+fn-2          256574       Asset        276531   shelf:                           nfshome101.snc6/nfshome102.snc6  1287525995251    0
+fn-2          256574       Asset        276532   shelf:                           nfshome101.snc6/nfshome102.snc6  1287525995251    0
+fn-2          256574       Asset        276535   shelf:                           nfshome101.snc6/nfshome102.snc6  1287525995251    0
+fn-2          256574       Asset        276536   shelf:                           nfshome101.snc6/nfshome102.snc6  1287525995251    0
+fn-2          256574       Asset        276537   shelf:                           nfshome101.snc6/nfshome102.snc6  1287525995251    0
+fn-2          256574       serf.Device  307415   1301635619942                    0
+fn-2          256574       serf.Device  321573   nfshome102.snc6.facebook.com     1301635925666                    0
+fn-2          256574       serf.Device  321589   shelf:                           nfshome101.snc6/nfshome102.snc6  2487             1301635925666  0
+fn-2          256574       serf.Device  321592   shelf:                           nfshome101.snc6/nfshome102.snc6  5437             1301635925666  0
+fn-2          256574       serf.Device  321600   shelf:                           nfshome101.snc6/nfshome102.snc6  8644             1301635925666  0
+fn-2          256574       serf.Device  321604   shelf:                           nfshome101.snc6/nfshome102.snc6  9496             1301635925666  0
+fn-2          256574       serf.Device  321607   shelf:                           nfshome101.snc6/nfshome102.snc6  5844             1301635925666  0
+fn-2          256574       serf.Device  321616   shelf:                           nfshome101.snc6/nfshome102.snc6  555              1301635925666  0
+fn-2          256574       serf.Device  321619   shelf:                           nfshome101.snc6/nfshome102.snc6  8106             1301635925666  0
+fn-2          256574       serf.Device  321623   shelf:                           nfshome101.snc6/nfshome102.snc6  134              1301635925666  0
+DE            448437       Asset        185736   NULL                             1302018532280                    100001268589053
+DE            448437       Asset        185738   NULL                             1302018532280                    100001268589053
+DE            448437       Asset        185739   NULL                             1302018532280                    100001268589053
+DE            448437       Asset        185744   NULL                             1302018532280                    100001268589053
+DE            448437       Asset        185749   NULL                             1302018532280                    100001268589053
+DE            448437       Asset        185754   NULL                             1302018532280                    100001268589053
+DE            448437       Asset        185759   NULL                             1302018532280                    100001268589053
+DE            448437       Asset        185764   NULL                             1302018532280                    100001268589053
+DE            448437       Asset        185769   NULL                             1302018532280                    100001268589053
+DE            448437       Asset        185774   NULL                             1302018532280                    100001268589053
+DE            448437       Asset        185785   NULL                             1302018532280                    100001268589053
+DE            448437       Asset        185786   NULL                             1302018532280                    100001268589053
+DE            448437       Asset        418753   NULL                             1302018532280                    100001268589053
+DE            448437       serf.Device  314254   NULL                             1302018532280                    100001268589053
+DE            448437       serf.Device  314257   NULL                             1302018532280                    100001268589053
+DE            448437       serf.Device  314258   NULL                             1302018532280                    100001268589053
+DE            448437       serf.Device  314259   NULL                             1302018532280                    100001268589053
+DE            448437       serf.Device  314262   NULL                             1302018532280                    100001268589053
+DE            448437       serf.Device  314263   NULL                             1302018532280                    100001268589053
+DE            448437       serf.Device  314266   NULL                             1302018532280                    100001268589053
+DE            448437       serf.Device  314267   NULL                             1302018532280                    100001268589053
+DE            448437       serf.Device  314270   NULL                             1302018532280                    100001268589053
+DE            448437       serf.Device  314271   NULL                             1302018532280                    100001268589053
+DE            448437       serf.Device  338529   NULL                             1302018532280                    100001268589053
+DE            448437       serf.Server  93047    NULL                             1302018532280                    100001268589053
+DE            448437       serf.Server  93049    NULL                             1302018532280                    100001268589053
+DE            448437       subnet       0        10.56.243.0/24                   1302126411479                    0
+UNKNOWN       448442       Asset        184716   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       Asset        184718   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       Asset        184719   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       Asset        184724   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       Asset        184729   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       Asset        184734   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       Asset        184739   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       Asset        184744   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       Asset        184749   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       Asset        184754   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       serf.Device  314015   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       serf.Device  314016   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       serf.Device  314019   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       serf.Device  314020   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       serf.Device  314024   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       serf.Device  314058   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       serf.Device  314065   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       serf.Device  314068   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       serf.Device  314071   NULL                             1302018892334                    100001268589053
+UNKNOWN       448442       serf.Device  314076   NULL                             1302018892334                    100001268589053
+UNKNOWN       448451       Asset        335164   NULL                             1302023406909                    100001268589053
+UNKNOWN       448451       Asset        335169   NULL                             1302023229197                    100001268589053
+UNKNOWN       448451       Asset        335170   NULL                             1302023379974                    100001268589053
+UNKNOWN       448451       Asset        335173   NULL                             1302023354304                    100001268589053
+UNKNOWN       448451       Asset        417675   NULL                             1302022863772                    100001268589053
+UNKNOWN       448451       Asset        417697   NULL                             1302023287226                    100001268589053
+UNKNOWN       448451       Asset        417741   NULL                             1302023123926                    100001268589053
+UNKNOWN       448451       Asset        418115   NULL                             1302023153542                    100001268589053
+UNKNOWN       448451       Asset        418291   NULL                             1302023315554                    100001268589053
+UNKNOWN       448451       Asset        418379   NULL                             1302023256821                    100001268589053
+UNKNOWN       448451       Asset        418423   NULL                             1302023094936                    100001268589053
+UNKNOWN       448451       Asset        418489   NULL                             1302022886599                    100001268589053
+UNKNOWN       448451       Asset        418511   NULL                             1302022637826                    100001268589053
+UNKNOWN       448451       Asset        418797   NULL                             1302023201977                    100001268589053
+UNKNOWN       448451       serf.Device  329902   NULL                             1302023406909                    100001268589053
+UNKNOWN       448451       serf.Device  329908   NULL                             1302023229197                    100001268589053
+UNKNOWN       448451       serf.Device  329910   NULL                             1302023379974                    100001268589053
+UNKNOWN       448451       serf.Device  329919   NULL                             1302023354304                    100001268589053
+UNKNOWN       448451       serf.Device  338473   NULL                             1302023153542                    100001268589053
+UNKNOWN       448451       serf.Device  338505   NULL                             1302022886599                    100001268589053
+UNKNOWN       448451       serf.Device  338508   NULL                             1302022637826                    100001268589053
+UNKNOWN       448451       serf.Device  338545   NULL                             1302023201977                    100001268589053
+UNKNOWN       448451       serf.Device  338614   NULL                             1302022863772                    100001268589053
+UNKNOWN       448451       serf.Device  338617   NULL                             1302023287226                    100001268589053
+UNKNOWN       448451       serf.Device  338622   NULL                             1302023123926                    100001268589053
+UNKNOWN       448451       serf.Device  338652   NULL                             1302023256821                    100001268589053
+UNKNOWN       448451       serf.Device  338656   NULL                             1302023094936                    100001268589053
+UNKNOWN       448451       serf.Device  338664   NULL                             1302023315554                    100001268589053
+    </pre>
+  </p>
+
+  <p>
+    Ok, I'll be honest. I have no idea _what_ this is. My best guess is it's output from an application which displays Facebook's server/cluster information, perhaps for debugging. I'm also guessing this wasn't meant to be public. If anyone has any information about this, please <a href="https://twitter.com/sintheticlabs" target="_blank">send me a Tweet</a>. I'm genuinely interested. :)
+  </p>
+
+  <p>
+    I've found a total of 12 new pieces of useful information, including the ones I've posted above. This isn't the end -- I'll go out and find more and more. It's important that Facebook realize all of these little hiccups add up when in the wrong hands. You shouldn't use public services such as Pastebin to post internal source code. That applies to command line output, server configurations, and anything which shouldn't be public, too. If it's on the Internet, you can find it. I can find it. The bad guys can find it.
+  </p>
+
+  <p>
+    I've updated the ZIP which I posted last time with everything I've found so far. Here it is, free to download, and thanks for reading.
+  </p>
+
+  <p class="greenbox">
+    URL: <a href="uploads/a-look-inside-facebooks-source-code/facebook_source_code.zip">facebook_source_code.zip</a><br>
+    Password: sintheticlabs.com
+  </p>
+
+  <p>
+    If you enjoyed this post and want to see more, follow <a href="https://twitter.com/sintheticlabs" target="_blank">@SintheticLabs</a> on Twitter.
+  </p>
+
+  <p class="goaway">This is a static site. There is no server side logic. Please point your scanners <a href="http://www.alexa.com/topsites" target="_blank">elsewhere</a>.</p>
+
+  <footer><a href="../index.html">Home</a> | <a href="../blog/index.html">Blog</a> | <a href="../tools.html">Tools</a> | <a href="https://twitter.com/sintheticlabs" target="_blank">Twitter</a> | <a href="https://github.com/sintheticlabs" target="_blank">Github</a> | <a href="../contact.html">Contact</a><span id="copyright">&copy; 2014</span></footer>
+</body>
+</html>
