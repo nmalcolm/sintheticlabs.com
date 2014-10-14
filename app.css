@@ -24,6 +24,10 @@ a:link, a:visited, a:active {
   float: right;
 }
 
+#btc {
+  text-align: center !important;
+}
+
 footer {
   background-color: #0F0;
   color: black;
