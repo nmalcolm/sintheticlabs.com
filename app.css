@@ -24,8 +24,9 @@ a:link, a:visited, a:active {
   float: right;
 }
 
-#btc {
+#btc, #ohgodmyeyes {
   text-align: center !important;
+  padding-bottom: 15px;
 }
 
 footer {
