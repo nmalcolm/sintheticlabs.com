@@ -5,4 +5,4 @@ This repository contains the source code for SintheticLabs.com. It's a pure HTML
 
 License
 =======
-The source code for SintheticLabs.com is released, without warranty, under the The MIT License. Please see LICENSE.
+The source code for SintheticLabs.com is released, without warranty, under the The MIT License. Please see LICENSE.txt.
