@@ -29,6 +29,20 @@ a:link, a:visited, a:active {
   padding-bottom: 15px;
 }
 
+#ffpropaganda {
+  text-align: center !important;
+  border: 5px solid red;
+  padding: 5px;
+  color: red;
+  margin-bottom: 15px;
+}
+
+#ffpropaganda a:link,
+#ffpropaganda a:visited,
+#ffpropaganda a:active {
+  color: red;
+}
+
 footer {
   background-color: #0F0;
   color: black;
